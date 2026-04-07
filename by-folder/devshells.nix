@@ -4,7 +4,7 @@ let
   devshellsDir = cfg.root + "/devshells";
 in
 {
-  imports = [ inputs.devshell.flakeModule ];
+  imports = lib.optional cfg.devshells.enable inputs.devshell.flakeModule;
 
   perSystem =
     { config, pkgs, ... }:
