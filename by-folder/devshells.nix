@@ -1,6 +1,7 @@
 { lib, config, inputs, ... }:
 let
-  devshellsDir = config.flake-by-folder.root + "/devshells";
+  cfg = config.flake-by-folder;
+  devshellsDir = cfg.root + "/devshells";
 in
 {
   imports = [ inputs.devshell.flakeModule ];
@@ -11,7 +12,7 @@ in
       starshipConfig = pkgs.writers.writeTOML "starship.toml" { };
     in
     {
-      devshells = lib.mkIf (builtins.pathExists devshellsDir) (
+      devshells = lib.mkIf (cfg.devshells.enable && builtins.pathExists devshellsDir) (
         lib.pipe (lib.fileset.fileFilter ({ name, ... }: name == "devshell.nix") devshellsDir) [
           (lib.fileset.toList)
           (lib.map (path: {

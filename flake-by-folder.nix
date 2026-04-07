@@ -8,6 +8,9 @@
       type = lib.types.path;
       description = "Root directory containing packages and devshells subdirectories";
     };
+    devshells.enable = lib.mkEnableOption "auto-discovery of devshells from folder structure" // {
+      default = true;
+    };
   };
 
   imports = [
