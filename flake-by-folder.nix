@@ -1,5 +1,6 @@
 {
   lib,
+  inputs,
   ...
 }:
 {
@@ -14,8 +15,8 @@
   };
 
   imports = [
-    ./by-folder/packages.nix
-    ./by-folder/devshells.nix
-    ./by-folder/overlays.nix
+    (lib.path.append inputs.self "by-folder/packages.nix")
+    (lib.path.append inputs.self "by-folder/devshells.nix")
+    (lib.path.append inputs.self "by-folder/overlays.nix")
   ];
 }

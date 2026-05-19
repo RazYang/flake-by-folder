@@ -1,6 +1,11 @@
-{ lib, config, inputs, ... }:
+{
+  lib,
+  config,
+  inputs,
+  ...
+}:
 let
-  packagesDir = config.flake-by-folder.root + "/packages";
+  packagesDir = lib.path.append config.flake-by-folder.root "packages";
 in
 {
   perSystem =
@@ -34,9 +39,7 @@ in
             lib.mapAttrs (n: _: self.pkgsFun (pkgs.pkgsCross."${n}")) lib.systems.examples
           );
 
-          pkgsStatic = lib.mergeAttrs (pkgs.writers.writeText "pkgsStatic" "") (
-            self.pkgsFun pkgs.pkgsStatic
-          );
+          pkgsStatic = lib.mergeAttrs (pkgs.writers.writeText "pkgsStatic" "") (self.pkgsFun pkgs.pkgsStatic);
 
           packages = lib.mergeAttrs (self.pkgsFun pkgs) {
             inherit (self) pkgsCross pkgsStatic;

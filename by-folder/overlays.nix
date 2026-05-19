@@ -1,6 +1,11 @@
-{ lib, config, inputs, ... }:
+{
+  lib,
+  config,
+  inputs,
+  ...
+}:
 let
-  overlaysDir = config.flake-by-folder.root + "/overlays";
+  overlaysDir = lib.path.append config.flake-by-folder.root "overlays";
 in
 {
   perSystem =
@@ -10,12 +15,11 @@ in
         import inputs.nixpkgs {
           inherit system;
           config.allowUnfree = true;
-          overlays =
-            lib.pipe (lib.fileset.fileFilter (args: args.name == "overlay.nix") overlaysDir) [
-              lib.fileset.toList
-              (lib.map (path: import path))
-              (lib.concat [ (_: _: { inherit inputs; }) ])
-            ];
+          overlays = lib.pipe (lib.fileset.fileFilter (args: args.name == "overlay.nix") overlaysDir) [
+            lib.fileset.toList
+            (lib.map (path: import path))
+            (lib.concat [ (_: _: { inherit inputs; }) ])
+          ];
         }
       );
     };

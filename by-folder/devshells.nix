@@ -5,7 +5,7 @@
 }:
 let
   cfg = config.flake-by-folder;
-  devshellsDir = cfg.root + "/devshells";
+  devshellsDir = lib.path.append cfg.root "devshells";
 in
 lib.mkIf (cfg.devshells.enable && builtins.pathExists devshellsDir) {
   perSystem =
