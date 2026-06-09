@@ -5,7 +5,8 @@
   ...
 }:
 let
-  packagesDir = lib.path.append config.flake-by-folder.root "packages";
+  cfg = config.flake-by-folder;
+  packagesDir = lib.path.append cfg.root "packages";
 in
 {
   perSystem =
@@ -41,9 +42,14 @@ in
 
           pkgsStatic = lib.mergeAttrs (pkgs.writers.writeText "pkgsStatic" "") (self.pkgsFun pkgs.pkgsStatic);
 
-          packages = lib.mergeAttrs (self.pkgsFun pkgs) {
-            inherit (self) pkgsCross pkgsStatic;
-          };
+          packages =
+            (self.pkgsFun pkgs)
+            // lib.optionalAttrs cfg.pkgsCross.enable {
+              inherit (self) pkgsCross;
+            }
+            // lib.optionalAttrs cfg.pkgsStatic.enable {
+              inherit (self) pkgsStatic;
+            };
         })
       )
     );
