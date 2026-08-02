@@ -11,7 +11,10 @@
           inputs.flake-by-folder.flakeModule
         ];
 
-        systems = import inputs.systems;
+        systems = [
+          "x86_64-linux"
+          "aarch64-linux"
+        ];
 
         flake-by-folder = {
           root = ./.;
@@ -22,13 +25,11 @@
     );
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-by-folder.url = "github:RazYang/flake-by-folder";
 
     devshell.url = "github:numtide/devshell";
     devshell.inputs.nixpkgs.follows = "nixpkgs";
-    systems.url = "path:./systems.nix";
-    systems.flake = false;
   };
 }
