@@ -79,6 +79,31 @@ Docker archive. Load it into Docker or Podman's local image storage with
 `nix run .#hello-image.copyToDockerDaemon` or
 `nix run .#hello-image.copyToPodman`, respectively.
 
+Use the generic `copyTo` runner for any writable destination supported by
+Skopeo:
+
+```bash
+# Push with the repository and tag selected by the destination reference.
+nix run .#hello-image.copyTo -- \
+  docker://registry.example.com/team/hello:latest
+
+# Export with Skopeo's directory transport.
+nix run .#hello-image.copyTo -- "dir:$PWD/hello-image"
+```
+
+The `--` separator ends the options parsed by `nix run`. `copyTo` fixes the
+source to the image built by Nix and forwards every following argument to
+`skopeo copy`; at minimum, provide a destination with its transport prefix.
+Additional Skopeo copy flags can also follow `--`. Other writable transports
+supported by the bundled Skopeo, such as `oci:` and `docker-archive:`, work the
+same way. Before writing to a remote `docker://` destination, make registry
+credentials available to Skopeo, for example through its auth file.
+
+The current wrapper invokes Skopeo with `--insecure-policy`. This disables
+container-image signature-policy enforcement; it does **not** disable registry
+TLS verification. Authentication and TLS behavior remain controlled by Skopeo
+configuration and copy flags.
+
 The last command exercises the bundler wiring. With the template it creates
 `./bundle-hello/bin/bundle-hello`. The result is backed by the Nix store; it is
 not intended to be a portable standalone executable.

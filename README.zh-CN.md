@@ -70,6 +70,27 @@ nix bundle --bundler .#default .#hello
 归档文件。可以分别通过 `nix run .#hello-image.copyToDockerDaemon` 或
 `nix run .#hello-image.copyToPodman` 加载到 Docker 或 Podman 的本地镜像存储中。
 
+需要复制到任意 Skopeo 支持的可写目标时，可以使用通用的 `copyTo` 入口：
+
+```bash
+# 使用目标引用指定要推送的仓库和标签。
+nix run .#hello-image.copyTo -- \
+  docker://registry.example.com/team/hello:latest
+
+# 使用 Skopeo 的目录 transport 导出。
+nix run .#hello-image.copyTo -- "dir:$PWD/hello-image"
+```
+
+`--` 用来结束由 `nix run` 解析的选项。`copyTo` 会把源固定为 Nix 构建的镜像，并将
+此后的所有参数原样传给 `skopeo copy`；至少需要提供一个包含 transport 前缀的目标。
+其他 Skopeo copy 参数也应放在 `--` 之后。内置 Skopeo 支持的其他可写 transport，
+例如 `oci:` 和 `docker-archive:`，使用方式相同。写入远端 `docker://` 目标前，需要让
+Skopeo 能够读取 registry 凭据，例如通过其认证文件。
+
+当前包装器会使用 `--insecure-policy` 调用 Skopeo。该选项会禁用容器镜像签名 policy
+检查，但**不会**关闭 registry TLS 校验；认证和 TLS 行为仍由 Skopeo 配置及 copy 参数
+控制。
+
 最后一条命令用于演示 bundler 的工作方式。该模板会生成
 `./bundle-hello/bin/bundle-hello`；结果仍然依赖 Nix store，仅用于演示连接方式，
 不应视为可移植的独立 bundle。
