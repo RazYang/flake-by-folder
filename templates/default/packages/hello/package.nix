@@ -1,9 +1,17 @@
-{ writeShellApplication }:
+{
+  writeShellApplication,
+  withDevShell,
+  ripgrep,
+}:
 
-writeShellApplication {
-  name = "hello";
+withDevShell
+  (writeShellApplication {
+    name = "hello";
 
-  text = ''
-    echo "hello from flake-by-folder"
-  '';
-}
+    text = ''
+      echo "hello from flake-by-folder"
+    '';
+  })
+  {
+    extraPackages = [ ripgrep ];
+  }
