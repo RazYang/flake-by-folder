@@ -30,6 +30,11 @@ __functions="$(declare -F)"
 
 declare -a __saved_vars=("PATH" "XDG_DATA_DIRS")
 
+# 与 __saved_vars 对偶：dumpEnv 时跳过这些 build 专有变量——
+# HOME（构建期 /homeless-shelter，留给调用者）、NIX_BUILD_TOP + TMP/TMPDIR/TEMP/TEMPDIR
+#（构建期临时目录，由后面的 if -z / export =$NIX_BUILD_TOP 换成 fresh mktemp）。
+declare -a __ignore_vars=("HOME" "NIX_BUILD_TOP" "TMP" "TMPDIR" "TEMP" "TEMPDIR")
+
 __shell="$1"
 
 __dumpEnv() {
@@ -77,6 +82,11 @@ __dumpEnv() {
               $__var_name = EPOCHSECONDS || \
               $__var_name = LINENO \
             ]]; then continue; fi
+
+        # devShell interface: 跳过 __ignore_vars（HOME/NIX_BUILD_TOP/TMP 等），不 dump build 专有值
+        local __skip=0 __iv
+        for __iv in "${__ignore_vars[@]}"; do [[ "$__iv" == "$__var_name" ]] && { __skip=1; break; }; done
+        [[ $__skip == 1 ]] && continue
 
         if [[ $type == -x ]] || [[ $type == -- ]] || [[ $type == -a ]] || [[ $type == -A ]]; then
             printf '%s\n' "$__line"
@@ -150,11 +160,7 @@ __dumpRc() {
     printf '    shopt -u expand_aliases\n'
     printf 'fi\n\n'
 
-    # devShell interface: 保存调用者真实 HOME（构建 env 里 HOME=/homeless-shelter，会被 __dumpEnv 覆盖）
-    printf '%s\n' '__devshell_real_home="${HOME:-}"'
     __dumpEnv
-    # devShell interface: 恢复真实 HOME（交互式/非交互式均用用户家目录，cargo/配置等才正常）
-    printf '%s\n' 'HOME="${__devshell_real_home:-$HOME}"; export HOME'
 
     printf '%s\n'   'if [[ ! -z "${NIX_DEVSHELL_VERBOSE:-}" ]]; then'
     printf '%s\n'   '    set -x'
