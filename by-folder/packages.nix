@@ -6,12 +6,17 @@
 }:
 let
   cfg = config.flake-by-folder;
-  packagesDir = lib.path.append cfg.root "packages";
+  discovery = import ./discover-with-default.nix {
+    inherit lib;
+    inherit (cfg) root;
+    directory = "packages";
+    fileName = "package.nix";
+  };
 in
 {
   perSystem =
     { pkgs, config, ... }:
-    lib.mkIf (builtins.pathExists packagesDir) (
+    lib.mkIf discovery.present (
       lib.filterAttrs (n: _: n == "packages") (
         lib.fix (self: {
           callPackageWrapper =
@@ -26,15 +31,7 @@ in
 
           pkgsFun =
             pkgsArg:
-            lib.pipe packagesDir [
-              (lib.fileset.fileFilter (args: args.name == "package.nix"))
-              (lib.fileset.toList)
-              (lib.map (path: {
-                name = builtins.baseNameOf (builtins.dirOf path);
-                value = (self.callPackageWrapper pkgsArg) (import path) { };
-              }))
-              (lib.listToAttrs)
-            ];
+            lib.mapAttrs (_: path: (self.callPackageWrapper pkgsArg) (import path) { }) discovery.files;
 
           pkgsCross = lib.mergeAttrs (pkgs.writers.writeText "pkgsCross" "") (
             lib.mapAttrs (n: _: self.pkgsFun (pkgs.pkgsCross."${n}")) lib.systems.examples

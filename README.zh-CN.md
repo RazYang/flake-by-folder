@@ -15,7 +15,8 @@ overlay 应用到每个 system 的包集。这样，每个输出都与其实现�
 ## 功能特性
 
 - 递归发现 `package.nix`、`devshell.nix`、`bundler.nix` 和 `overlay.nix`。
-- 使用包、开发环境和 bundler 文件的直接父目录名称作为其导出属性名。
+- 约定目录中的「包」「开发环境」和「bundler」以直接父目录命名。根目录的 `package.nix`
+  和 `devshell.nix` 分别提供「默认包」和「默认开发环境」。
 - 包之间可以通过普通函数参数引用其他自动发现的包。
 - 自动向开发环境和 bundler 注入已发现的包。
 - 可选地使用 `pkgs.pkgsStatic` 和 `pkgs.pkgsCross` 中的包集重新求值所有包。
@@ -139,19 +140,25 @@ Skopeo 能够读取 registry 凭据，例如通过其认证文件。
 `flake-by-folder` 本身不会选择 system；它只会为使用方 `flake-parts` 项目配置的
 system 创建 per-system 输出。
 
-当 `devshells.enable` 为 `true` 且存在 `devshells/` 目录时，使用方还必须像上例一样
-导入 `inputs.devshell.flakeModule`。本模块不会代替使用方隐式导入 `devshell`。
+当 `devshells.enable` 为 `true` 且根目录有 `devshell.nix` 或 `devshells/` 时，
+使用方还必须像上例一样导入 `inputs.devshell.flakeModule`。本模块不会代替使用方隐式导入 `devshell`。
 
 ## 目录约定
 
-发现过程会在 `flake-by-folder.root` 下递归进行：
+以下路径均相对于 `flake-by-folder.root`：
 
 | 源文件 | 生成结果 | 常用命令 |
 | --- | --- | --- |
+| `package.nix` | `packages.<system>.default` | `nix build` |
+| `devshell.nix` | `devShells.<system>.default` | `nix develop` |
 | `packages/**/package.nix` | `packages.<system>.<直接父目录>` | `nix build .#<名称>` |
 | `devshells/**/devshell.nix` | `devShells.<system>.<直接父目录>` | `nix develop .#<名称>` |
 | `bundlers/**/bundler.nix` | `bundlers.<system>.<直接父目录>` | `nix bundle --bundler .#<名称> .#<包>` |
 | `overlays/**/overlay.nix` | 应用到 per-system `pkgs` | 不单独导出 flake 属性 |
+
+两个根文件各自可选，格式与对应目录中的文件相同，不要求先创建 `packages/` 或
+`devshells/`。如果两处都定义了同一类的 `default`，以根文件为准，其他名称不受影响。
+没有对应根文件时，仍可使用 `packages/default/package.nix` 或 `devshells/default/devshell.nix`。
 
 文件名严格匹配并区分大小写。例如，`packages/hello/package.nix` 和
 `packages/tools/hello/package.nix` 生成的名称都是 `hello`。同一类别内应保证直接父目录
@@ -278,13 +285,14 @@ writeShellApplication {
 
 | 选项 | 类型 | 默认值 | 含义 |
 | --- | --- | --- | --- |
-| `flake-by-folder.root` | path 或绝对路径字符串 | 必填 | 包含约定目录的根路径 |
+| `flake-by-folder.root` | path 或绝对路径字符串 | 必填 | 包含约定目录和可选默认文件的根路径 |
 | `flake-by-folder.devshells.enable` | boolean | `true` | 发现 `devshell.nix` |
 | `flake-by-folder.bundlers.enable` | boolean | `true` | 发现 `bundler.nix` |
 | `flake-by-folder.pkgsCross.enable` | boolean | `true` | 在 `packages.<system>.pkgsCross` 下增加交叉包集 |
 | `flake-by-folder.pkgsStatic.enable` | boolean | `true` | 在 `packages.<system>.pkgsStatic` 下增加静态包集 |
 
-包和 overlay 发现目前没有单独的启用开关；对应目录存在时就会启用。
+「包」和「overlay」的发现没有单独的开关：前者在存在 `package.nix` 或 `packages/`
+时启用，后者仍要求存在 `overlays/`。
 
 默认模板显式关闭了 `pkgsCross` 和 `pkgsStatic`，因为并非所有包及其依赖都能使用
 这些包集完成求值。
@@ -332,6 +340,12 @@ nix build .#pkgsCross.aarch64-multiplatform.hello
 | `templates/default/` | 端到端使用方示例 |
 
 ## 开发与验证
+
+在临时项目中验证「默认包」和「默认开发环境」的发现规则：
+
+```bash
+bash tests/root-defaults.sh
+```
 
 检查模块库自身：
 

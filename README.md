@@ -18,8 +18,9 @@ project.
 
 - Discovers `package.nix`, `devshell.nix`, `bundler.nix`, and `overlay.nix`
   files recursively.
-- Uses each package, development-shell, and bundler file's immediate parent
-  directory as its exported attribute name.
+- Names packages, development shells, and bundlers in convention directories
+  after their immediate parent directory. A root-level `package.nix` or
+  `devshell.nix` provides the corresponding `default` output.
 - Lets packages depend on other discovered packages through ordinary function
   arguments.
 - Makes discovered packages available to development shells and bundlers.
@@ -153,20 +154,28 @@ and `systems` for your project.
 `flake-by-folder` does not choose systems. It creates per-system outputs only
 for the systems configured by the consuming `flake-parts` project.
 
-When `devshells.enable` is true and a `devshells/` directory exists, the
-consumer must also import `inputs.devshell.flakeModule`, as shown above. The
-module deliberately does not import `devshell` on the consumer's behalf.
+When `devshells.enable` is true and either a root-level `devshell.nix` or a
+`devshells/` directory exists, the consumer must also import
+`inputs.devshell.flakeModule`, as shown above. The module does not import
+`devshell` on the consumer's behalf.
 
 ## Directory conventions
 
-Discovery is recursive below `flake-by-folder.root`:
+Paths are relative to `flake-by-folder.root`:
 
 | Source file | Result | Typical command |
 | --- | --- | --- |
+| `package.nix` | `packages.<system>.default` | `nix build` |
+| `devshell.nix` | `devShells.<system>.default` | `nix develop` |
 | `packages/**/package.nix` | `packages.<system>.<parent-directory>` | `nix build .#<name>` |
 | `devshells/**/devshell.nix` | `devShells.<system>.<parent-directory>` | `nix develop .#<name>` |
 | `bundlers/**/bundler.nix` | `bundlers.<system>.<parent-directory>` | `nix bundle --bundler .#<name> .#<package>` |
 | `overlays/**/overlay.nix` | Applied to the per-system `pkgs` | No separate flake output |
+
+The two root files are independent and use the same format as their entries in
+`packages/` and `devshells/`. Neither directory is required. If both locations
+define `default`, the root file wins for that output only. Without it,
+`packages/default/package.nix` and `devshells/default/devshell.nix` work as before.
 
 Filenames are matched exactly and are case-sensitive. For example, both
 `packages/hello/package.nix` and
@@ -303,14 +312,15 @@ argument scope.
 
 | Option | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `flake-by-folder.root` | path or absolute path string | Required | Root containing the convention directories |
+| `flake-by-folder.root` | path or absolute path string | Required | Root containing the convention directories and optional default files |
 | `flake-by-folder.devshells.enable` | boolean | `true` | Discover `devshell.nix` files |
 | `flake-by-folder.bundlers.enable` | boolean | `true` | Discover `bundler.nix` files |
 | `flake-by-folder.pkgsCross.enable` | boolean | `true` | Add cross-package sets below `packages.<system>.pkgsCross` |
 | `flake-by-folder.pkgsStatic.enable` | boolean | `true` | Add a static package set below `packages.<system>.pkgsStatic` |
 
-Package and overlay discovery do not currently have separate enable switches;
-they are activated when their directories exist.
+Package and overlay discovery do not have separate enable switches. Package
+discovery is active when `package.nix` or `packages/` exists; overlay discovery
+requires `overlays/`.
 
 The default template explicitly disables `pkgsCross` and `pkgsStatic` because
 not every package or dependency can be evaluated with those package sets.
@@ -364,6 +374,13 @@ and does not expand the nested package tree.
 | `templates/default/` | End-to-end consumer example |
 
 ## Development and verification
+
+Run the default package and development shell discovery tests against a temporary
+consumer flake:
+
+```bash
+bash tests/root-defaults.sh
+```
 
 Check the library flake itself:
 

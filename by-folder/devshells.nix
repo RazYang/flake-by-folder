@@ -6,9 +6,14 @@
 }:
 let
   cfg = config.flake-by-folder;
-  devshellsDir = lib.path.append cfg.root "devshells";
+  discovery = import ./discover-with-default.nix {
+    inherit lib;
+    inherit (cfg) root;
+    directory = "devshells";
+    fileName = "devshell.nix";
+  };
 in
-lib.mkIf (cfg.devshells.enable && builtins.pathExists devshellsDir) {
+lib.mkIf (cfg.devshells.enable && discovery.present) {
   perSystem =
     { config, pkgs, ... }:
     let
@@ -32,22 +37,15 @@ lib.mkIf (cfg.devshells.enable && builtins.pathExists devshellsDir) {
           called;
     in
     {
-      devshells = lib.pipe (lib.fileset.fileFilter ({ name, ... }: name == "devshell.nix") devshellsDir) [
-        (lib.fileset.toList)
-        (lib.map (path: {
-          name = builtins.baseNameOf (builtins.dirOf path);
-          value = {
-            imports = [ (callDevshellWrapper pkgs (import path) { }) ];
-            devshell = {
-              motd = lib.mkDefault "";
-              interactive.PS1.text = ''
-                export STARSHIP_CONFIG=${starshipConfig}
-                eval -- "''$(${pkgs.starship}/bin/starship init bash --print-full-init)"
-              '';
-            };
-          };
-        }))
-        (lib.listToAttrs)
-      ];
+      devshells = lib.mapAttrs (_: path: {
+        imports = [ (callDevshellWrapper pkgs (import path) { }) ];
+        devshell = {
+          motd = lib.mkDefault "";
+          interactive.PS1.text = ''
+            export STARSHIP_CONFIG=${starshipConfig}
+            eval -- "''$(${pkgs.starship}/bin/starship init bash --print-full-init)"
+          '';
+        };
+      }) discovery.files;
     };
 }

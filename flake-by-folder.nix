@@ -7,7 +7,11 @@
     root = lib.mkOption {
       type = lib.types.either lib.types.path lib.types.str;
       apply = v: if builtins.isString v then /. + v else v;
-      description = "Root directory containing packages, devshells, and bundlers subdirectories. Accepts a path or an absolute path string (strings are coerced to a path).";
+      description = ''
+        Base directory for discovery. An optional `package.nix` or `devshell.nix` in this
+        directory provides the corresponding default output.
+        Accepts a path or an absolute path string (strings are coerced to a path).
+      '';
     };
     devshells.enable = lib.mkEnableOption "auto-discovery of devshells from folder structure" // {
       default = true;
